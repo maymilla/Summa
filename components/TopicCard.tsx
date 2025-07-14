@@ -9,7 +9,7 @@ interface TopicCardProps {
 export default function TopicCard({ id, title, description }: TopicCardProps) {
   return (
     <Link href={`/topic/${id}`} className="block">
-      <div className="w-[419px] h-[551px] bg-white rounded-[30px] shadow-[0px_4px_8px_0px_rgba(0,0,0,0.25)] cursor-pointer hover:shadow-lg transition-shadow overflow-hidden">
+      <div className="w-full max-w-[419px] min-w-[320px] h-[551px] bg-white rounded-[30px] shadow-[0px_4px_8px_0px_rgba(0,0,0,0.25)] cursor-pointer hover-lift smooth-transition overflow-hidden mx-auto">
         {/* Image Container */}
         <div className="flex justify-center items-center p-5">
           <div className="w-[379px] h-[373px] bg-[#D9D9D9] rounded-[20px] shadow-[0px_4px_4px_0px_rgba(0,0,0,0.25)]"></div>

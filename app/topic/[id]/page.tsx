@@ -24,26 +24,21 @@ export default function TopicDetailPage({ params }: TopicDetailPageProps) {
   }
 
   return (
-    <div
-      className="min-h-screen w-full"
-      style={{
-        background: "linear-gradient(180deg, #E2F1FF 0%, #F7F1FF 100%)",
-      }}
-    >
+    <div className="gradient-bg">
       {/* Header */}
       <Header />
 
       {/* Main Content Container */}
-      <div className="container mx-auto px-4 py-8">
+      <div className="container-responsive py-8 pb-16">
         {/* Main Title */}
-        <div className="mb-8 ml-8">
-          <h1 className="text-2xl md:text-[28px] font-bold text-black leading-normal text-left">
+        <div className="mb-8 px-4">
+          <h1 className="text-xl sm:text-2xl md:text-[28px] font-bold text-black leading-normal text-left">
             {currentTopic.title}
           </h1>
         </div>
 
         {/* Perspective Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12 justify-items-center">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mb-12 justify-items-center">
           {currentTopic.perspectives.map((perspective) => (
             <PerspectiveCard
               key={perspective.id}
@@ -56,13 +51,13 @@ export default function TopicDetailPage({ params }: TopicDetailPageProps) {
         </div>
 
         {/* Community Notes Section */}
-        <div className="mb-8">
-          <h2 className="text-xl font-bold text-black text-left mb-6 ml-8">
+        <div className="mb-16">
+          <h2 className="text-lg sm:text-xl font-bold text-black text-left mb-6 px-4">
             Community Notes
           </h2>
           
           {/* Community Note Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 justify-items-center">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 justify-items-center">
             {currentTopic.communityNotes.map((note) => (
               <CommunityNote
                 key={note.id}

@@ -29,6 +29,9 @@ body {
     Roboto,
     Helvetica,
     sans-serif;
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
 }
 
 /* Hide scrollbar but keep functionality */
@@ -39,4 +42,131 @@ body {
   /* Hide scrollbar for IE, Edge and Firefox */
   -ms-overflow-style: none;
   scrollbar-width: none;
+}
+
+/* Responsive utilities */
+@media (max-width: 768px) {
+  .grid-responsive {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (min-width: 769px) and (max-width: 1200px) {
+  .grid-responsive {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1201px) {
+  .grid-responsive {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* Ensure consistent spacing across devices */
+.container-responsive {
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+/* Smooth transitions for better UX */
+.smooth-transition {
+  transition: all 0.3s ease;
+}
+
+/* Prevent horizontal scroll on small screens */
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  overflow-x: hidden;
+}
+
+/* Ensure tooltips don't cause overflow */
+.tooltip-container {
+  position: relative;
+  overflow: visible;
+}
+
+.tooltip-content {
+  position: absolute;
+  z-index: 1000;
+  white-space: nowrap;
+}
+
+/* Better focus states for accessibility */
+button:focus-visible,
+input:focus-visible,
+a:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+/* Improved hover states */
+@media (hover: hover) {
+  .hover-lift:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+  }
+}
+
+/* Ensure full background coverage */
+.min-h-screen {
+  min-height: 100vh;
+  min-height: 100dvh; /* Dynamic viewport height for better mobile support */
+}
+
+/* Prevent any gaps or spaces */
+.full-height-container {
+  min-height: calc(100vh - 0px);
+  background: linear-gradient(180deg, #E2F1FF 0%, #F7F1FF 100%);
+}
+
+/* Ensure proper spacing at bottom */
+.bottom-spacing {
+  padding-bottom: 4rem;
+}
+
+@media (max-width: 768px) {
+  .bottom-spacing {
+    padding-bottom: 2rem;
+  }
+}
+
+/* Reset default margins and ensure full coverage */
+html {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+
+/* Ensure the main container always fills the screen */
+.page-container {
+  min-height: 100vh;
+  background: linear-gradient(180deg, #E2F1FF 0%, #F7F1FF 100%);
+  background-attachment: fixed;
+  background-size: cover;
+  background-repeat: no-repeat;
+}
+
+/* Additional safety for gradient coverage */
+.gradient-bg {
+  background: linear-gradient(180deg, #E2F1FF 0%, #F7F1FF 100%);
+  background-attachment: fixed;
+  min-height: 100vh;
+  position: relative;
+}
+
+.gradient-bg::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(180deg, #E2F1FF 0%, #F7F1FF 100%);
+  z-index: -1;
 }

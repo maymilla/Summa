@@ -1,9 +1,9 @@
 "use client";
 
-import Header from "../components/Header";
-import TopicCard from "../components/TopicCard";
+import Header from "../../components/Header";
+import TopicCard from "../../components/TopicCard";
 import { useState } from "react";
-import { topics } from "../data/topics";
+import { topics } from "../../data/topics";
 
 export default function SearchPage() {
   const [searchQuery, setSearchQuery] = useState("");

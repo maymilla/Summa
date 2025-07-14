@@ -13,13 +13,18 @@ export default function SearchPage() {
   );
 
   return (
-    <div className="gradient-bg">
+    <div
+      className="min-h-screen w-full"
+      style={{
+        background: "linear-gradient(180deg, #E2F1FF 0%, #F7F1FF 100%)",
+      }}
+    >
       {/* Header */}
       <Header />
 
       {/* Search Bar */}
       <div className="flex justify-center pt-6 pb-12 px-4">
-        <div className="relative w-full max-w-[603px] min-w-[280px] h-[33px]">
+        <div className="relative w-full max-w-[603px] h-[33px]">
           <input
             type="text"
             value={searchQuery}
@@ -31,23 +36,21 @@ export default function SearchPage() {
       </div>
 
       {/* Topic Cards */}
-      <div className="flex justify-center px-4 pb-16">
-        <div className="container-responsive">
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 justify-items-center">
-            {filteredTopics.map((topic) => (
-              <TopicCard
-                key={topic.id}
-                id={topic.id}
-                title={topic.title}
-                description={topic.description}
-              />
-            ))}
-            {filteredTopics.length === 0 && (
-              <div className="col-span-full text-center text-gray-500 py-8">
-                No topics found matching your search.
-              </div>
-            )}
-          </div>
+      <div className="flex justify-center px-4 pb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 justify-items-center max-w-fit">
+          {filteredTopics.map((topic) => (
+            <TopicCard
+              key={topic.id}
+              id={topic.id}
+              title={topic.title}
+              description={topic.description}
+            />
+          ))}
+          {filteredTopics.length === 0 && (
+            <div className="col-span-full text-center text-gray-500 py-8">
+              No topics found matching your search.
+            </div>
+          )}
         </div>
       </div>
     </div>

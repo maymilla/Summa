@@ -1,41 +1,112 @@
+import React from 'react';
+import styled from 'styled-components';
+import HoverCard, { useHoverContent } from './HoverCard';
+
 interface CommunityNoteProps {
   content: string;
   backgroundColor: string;
   sources?: string[];
+  colorCycle?: number; // Index to determine color rotation
 }
+
+const SourcesContainer = styled.div`
+  position: absolute;
+  bottom: 0.5rem;
+  right: 0.5rem;
+  z-index: 20;
+
+  .sources-tooltip {
+    position: absolute;
+    bottom: 100%;
+    right: 0;
+    margin-bottom: 0.5rem;
+    width: 12rem;
+    background-color: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.5rem;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    opacity: 0;
+    transition: opacity 0.2s;
+    padding: 0.5rem;
+    z-index: 30;
+  }
+
+  .hover-card:hover .sources-tooltip {
+    opacity: 1;
+  }
+
+  .sources-title {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 0.25rem;
+  }
+
+  .sources-list {
+    font-size: 0.75rem;
+    color: #6b7280;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .sources-list li {
+    padding-bottom: 0.25rem;
+    border-bottom: 1px solid #f3f4f6;
+    margin-bottom: 0.25rem;
+  }
+
+  .sources-list li:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+  }
+`;
+
+const ContentWrapper = styled.div`
+  font-size: 0.875rem;
+  color: #000000;
+  font-weight: 400;
+  line-height: 1.5;
+  height: 84px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 0.5rem;
+
+  /* Hide scrollbar but keep functionality */
+  &::-webkit-scrollbar {
+    display: none;
+  }
+
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+`;
 
 export default function CommunityNote({
   content,
   backgroundColor,
   sources = [],
+  colorCycle = 0,
 }: CommunityNoteProps) {
+  const hoverContent = useHoverContent(
+    <ContentWrapper>{content}</ContentWrapper>
+  );
+
   return (
-    <div
-      className="w-full max-w-[419px] min-w-[320px] h-[124px] rounded-[20px] shadow-[0px_4px_8px_0px_rgba(0,0,0,0.25)] relative group mx-auto hover-lift smooth-transition"
-      style={{ backgroundColor }}
-    >
-      <div className="p-4 h-full">
-        <p className="text-sm text-black font-normal leading-normal h-[84px] overflow-y-auto overflow-x-hidden scrollbar-hide pr-6">
-          {content}
-        </p>
-        
-        {sources.length > 0 && (
-          <div className="absolute bottom-2 right-2 tooltip-container">
-            <div className="w-3 h-3 bg-gray-400 rounded-full cursor-help smooth-transition hover:bg-gray-500">
-              <div className="tooltip-content absolute bottom-full right-0 mb-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10 p-2">
-                <div className="text-xs font-semibold text-gray-700 mb-1">Sources:</div>
-                <ul className="text-xs text-gray-600 space-y-1">
-                  {sources.map((source, index) => (
-                    <li key={index} className="border-b border-gray-100 pb-1 last:border-b-0">
-                      {source}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
+    <HoverCard backgroundColor={backgroundColor} height="124px" colorCycle={colorCycle}>
+      {hoverContent}
+      
+      {sources.length > 0 && (
+        <SourcesContainer>
+          <div className="sources-tooltip">
+            <div className="sources-title">Sources:</div>
+            <ul className="sources-list">
+              {sources.map((source, index) => (
+                <li key={index}>{source}</li>
+              ))}
+            </ul>
           </div>
-        )}
-      </div>
-    </div>
+        </SourcesContainer>
+      )}
+    </HoverCard>
   );
 }

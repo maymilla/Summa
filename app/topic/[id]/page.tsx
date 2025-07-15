@@ -58,12 +58,13 @@ export default function TopicDetailPage({ params }: TopicDetailPageProps) {
           
           {/* Community Note Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 justify-items-center">
-            {currentTopic.communityNotes.map((note) => (
+            {currentTopic.communityNotes.map((note, index) => (
               <CommunityNote
                 key={note.id}
                 content={note.content}
                 backgroundColor={note.backgroundColor}
                 sources={note.sources}
+                colorCycle={index}
               />
             ))}
           </div>

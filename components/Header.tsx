@@ -1,6 +1,9 @@
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 export default function Header() {
+  const pathname = usePathname();
+  
   return (
     <header className="flex items-center w-full px-4 sm:px-7 pt-5 pb-6 relative min-w-[320px]">
       {/* Logo */}
@@ -12,20 +15,24 @@ export default function Header() {
       <div className="absolute left-1/2 transform -translate-x-1/2 flex items-center gap-4 sm:gap-8">
         <Link
           href="/search"
-          className="inline-flex items-center justify-center px-3 py-1.5 bg-black text-white text-sm sm:text-base font-normal rounded-[20px] whitespace-nowrap"
+          className={`inline-flex items-center justify-center px-3 py-1.5 text-sm sm:text-base font-normal rounded-[20px] whitespace-nowrap transition-colors ${
+            pathname === '/search' 
+              ? 'bg-black text-white' 
+              : 'bg-transparent text-black'
+          }`}
         >
           search
         </Link>
-        <button 
-          className="inline-flex items-center justify-center px-3 py-1.5 text-black text-sm sm:text-base font-normal relative group whitespace-nowrap"
-          title="Coming soon!"
+        <Link
+          href="/explore"
+          className={`inline-flex items-center justify-center px-3 py-1.5 text-sm sm:text-base font-normal rounded-[20px] whitespace-nowrap transition-colors ${
+            pathname === '/explore' 
+              ? 'bg-black text-white' 
+              : 'bg-transparent text-black'
+          }`}
         >
           explore
-          {/* Tooltip */}
-          <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-black text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap z-10">
-            Coming soon!
-          </div>
-        </button>
+        </Link>
       </div>
 
       {/* Profile Avatar */}

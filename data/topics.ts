@@ -144,3 +144,18 @@ export const topics = [
     ]
   }
 ];
+
+export const featuredTopics = [
+    {
+      id: 1,
+      title: "The Art of Public Speaking",
+      description: "Overcome your fears and learn to deliver compelling presentations that captivate any audience.",
+      // You would have an image URL here, e.g., imageUrl: "/images/public-speaking.jpg"
+    },
+    {
+      id: 2,
+      title: "Data Science with Python",
+      description: "Dive into data analysis, visualization, and machine learning using the powerful Python ecosystem.",
+      // imageUrl: "/images/data-science.jpg"
+    },
+];

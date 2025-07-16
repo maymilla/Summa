@@ -1,0 +1,73 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  email String @id @unique
+  nama  String
+  pass  String
+  
+  // Relations
+  comms Comm[]
+  
+  @@map("user")
+}
+
+model Topic {
+  idtopic Int @id @default(autoincrement())
+  judul   String
+  desc    String
+  
+  // Relations
+  perspectives Perspective[]
+  
+  @@map("topic")
+}
+
+model Perspective {
+  idpers  Int @id @default(autoincrement())
+  idtopic Int
+  content String
+  
+  // Relations
+  topic Topic @relation(fields: [idtopic], references: [idtopic], onDelete: Cascade)
+  comms Comm[]
+  sources Source[]
+  
+  @@map("perspective")
+}
+
+model Comm {
+  idcomm    Int @id @default(autoincrement())
+  idpers    Int
+  notes     String
+  userEmail String
+  
+  // Relations
+  perspective Perspective @relation(fields: [idpers], references: [idpers], onDelete: Cascade)
+  user        User        @relation(fields: [userEmail], references: [email])
+  
+  @@map("comm")
+}
+
+model Source {
+  idsource Int @id @default(autoincrement())
+  idpers   Int
+  sources  String
+  
+  // Relations
+  perspective Perspective @relation(fields: [idpers], references: [idpers], onDelete: Cascade)
+  
+  @@map("source")
+}

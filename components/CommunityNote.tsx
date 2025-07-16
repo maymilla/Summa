@@ -4,7 +4,7 @@ import HoverCard, { useHoverContent } from './HoverCard';
 
 interface CommunityNoteProps {
   content: string;
-  backgroundColor: string;
+  backgroundColor?: string;
   sources?: string[];
   colorCycle?: number; // Index to determine color rotation
 }

@@ -3,11 +3,34 @@
 import Header from "../../components/Header";
 import TopicListItem from "../../components/TopicListItem";
 import FeaturedTopic from "../../components/FeaturedTopic";
-import { useState } from "react";
-import { topics } from "../../data/topics";
-import { featuredTopics } from "../../data/topics";
+import { useState, useEffect } from "react";
+
+interface Topic {
+  idtopic: number;
+  judul: string;
+  desc: string;
+}
 
 export default function ExplorePage() {
+  const [topics, setTopics] = useState<Topic[]>([]);
+  const [featuredTopics, setFeaturedTopics] = useState<Topic[]>([]);
+
+  useEffect(() => {
+    const fetchTopics = async () => {
+      try {
+        const response = await fetch('/api/topics');
+        if (response.ok) {
+          const data = await response.json();
+          setTopics(data);
+          setFeaturedTopics(data.slice(0, 3));
+        }
+      } catch (error) {
+        console.error('Error fetching topics:', error);
+      }
+    };
+
+    fetchTopics();
+  }, []);
   return (
     <div className="min-h-screen w-full font-sans" style={{ background: "linear-gradient(180deg, #E2F1FF 0%, #F7F1FF 100%)" }}>
       <Header />
@@ -22,15 +45,24 @@ export default function ExplorePage() {
           <div className="lg:col-span-3 flex flex-col space-y-5 p-5">
             {topics.map((topic) => (
               <TopicListItem
-                key={topic.id}
-                topic={topic}
+                key={topic.idtopic.toString()}
+                topic={{
+                  id: topic.idtopic,
+                  title: topic.judul,
+                  description: topic.desc,
+                  perspectives: []
+                }}
               />
             ))}
           </div>
 
           {/* Right Column: Featured Topic Carousel */}
           <div className="lg:col-span-2 flex flex-col items-center justify-center">
-            <FeaturedTopic items={featuredTopics} />
+            <FeaturedTopic items={featuredTopics.map(topic => ({
+              id: topic.idtopic,
+              title: topic.judul,
+              description: topic.desc
+            }))} />
           </div>
         </div>
       </main>

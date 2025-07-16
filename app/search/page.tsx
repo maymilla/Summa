@@ -2,19 +2,39 @@
 
 import Header from "../../components/Header";
 import TopicCard from "../../components/TopicCard";
-import { useState } from "react";
-import { topics } from "../../data/topics";
+import { useState, useEffect } from "react";
+
+interface Topic {
+  idtopic: number;
+  judul: string;
+  desc: string;
+}
 
 export default function SearchPage() {
   const [searchQuery, setSearchQuery] = useState("");
+  const [topics, setTopics] = useState<Topic[]>([]);
 
-  // Derived state to determine if we are in the "searching" state.
-  // We use trim() to ensure that searching doesn't trigger on empty spaces.
+  useEffect(() => {
+    const fetchTopics = async () => {
+      try {
+        const response = await fetch('/api/topics');
+        if (response.ok) {
+          const data = await response.json();
+          setTopics(data);
+        }
+      } catch (error) {
+        console.error('Error fetching topics:', error);
+      }
+    };
+
+    fetchTopics();
+  }, []);
+
   const isSearching = searchQuery.trim() !== "";
 
   const filteredTopics = isSearching
     ? topics.filter(topic =>
-        topic.title.toLowerCase().includes(searchQuery.toLowerCase())
+        topic.judul.toLowerCase().includes(searchQuery.toLowerCase())
       )
     : []; 
 
@@ -54,17 +74,17 @@ export default function SearchPage() {
             {filteredTopics.length > 0 ? (
               filteredTopics.map((topic) => (
                 <TopicCard
-                  key={topic.id}
-                  id={topic.id}
-                  title={topic.title}
-                  description={topic.description}
+                  key={topic.idtopic}
+                  id={topic.idtopic}
+                  title={topic.judul}
+                  description={topic.desc}
                 />
               ))
             ) : (
               // if no results are found
               <div className="col-span-full text-center text-gray-600 py-8">
                 <h3 className="text-lg font-semibold">No topics found</h3>
-                <p>Try a different search term to find what you're looking for.</p>
+                <p>Try a different search term to find what you&apos;re looking for.</p>
               </div>
             )}
           </div>

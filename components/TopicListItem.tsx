@@ -1,7 +1,7 @@
 import * as React from 'react';
 
 type Perspective = {
-  id: string;
+  id: number;
   title: string;
   content: string;
   sourcesColor: string;
@@ -9,7 +9,7 @@ type Perspective = {
 };
 
 type Topic = {
-  id: string;
+  id: number;
   title: string;
   description: string;
   perspectives: Perspective[];

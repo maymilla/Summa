@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 interface TopicCardProps {
-  id: string;
+  id: number;
   title: string;
   description: string;
 }

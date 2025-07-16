@@ -9,7 +9,7 @@ interface HoverCardProps {
   borderRadius?: string;
   className?: string;
   style?: React.CSSProperties;
-  colorCycle?: number; // 0, 1, or 2 to determine color rotation order
+  colorCycle?: number;
 }
 
 const StyledWrapper = styled.div<{
@@ -32,7 +32,12 @@ const StyledWrapper = styled.div<{
     overflow: hidden;
     cursor: pointer;
     transition: transform 0.3s ease;
-    background-color: ${props => props.$backgroundColor || 'transparent'};
+    background-color: ${props => {
+      if (props.$backgroundColor) return props.$backgroundColor;
+      const colors = ['rgba(255, 234, 253, 0.9)', 'rgba(233, 223, 255, 0.9)', 'rgba(235, 245, 255, 0.9)'];
+      const cycle = props.$colorCycle || 0;
+      return colors[cycle % 3];
+    }};
   }
 
   .hover-card:hover {

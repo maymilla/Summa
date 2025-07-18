@@ -4,6 +4,7 @@ import { use, useState, useEffect } from "react";
 import Header from "../../../components/Header";
 import PerspectiveCard from "../../../components/PerspectiveCard";
 import CommunityNote from "../../../components/CommunityNote";
+import Loader from "../../../components/Loader";
 
 interface TopicDetailPageProps {
   params: Promise<{
@@ -83,8 +84,13 @@ export default function TopicDetailPage({ params }: TopicDetailPageProps) {
 
   if (loading) {
     return (
-      <div className="min-h-screen w-full flex items-center justify-center">
-        <div className="text-xl">Loading...</div>
+      <div
+        className="min-h-screen w-full flex items-center justify-center"
+        style={{
+          background: "linear-gradient(180deg, #E2F1FF 0%, #F7F1FF 100%)",
+        }}
+      >
+        <Loader />
       </div>
     );
   }
@@ -114,7 +120,7 @@ export default function TopicDetailPage({ params }: TopicDetailPageProps) {
         {/* Perspective Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mb-12 justify-items-center">
           {topic.perspectives.map((perspective, index) => {
-            const colors = ['#B965B0', '#22C55E', '#3B82F6'];
+            const colors = ['rgb(250, 210, 246)', 'rgb(220, 204, 255)', 'rgb(196, 226, 255)'];
             const perspectiveSources = sources.filter(source => source.idpers === perspective.idpers);
             return (
               <PerspectiveCard

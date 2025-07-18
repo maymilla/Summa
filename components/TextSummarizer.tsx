@@ -68,7 +68,12 @@ const TextSummarizer: React.FC = () => {
           compressionRatio: data.compressionRatio || 0
         });
       } else {
-        setError(data.error || 'Failed to generate summary');
+        if (!data.success) {
+            setError(data.error || 'Failed to generate summary');
+        } if (!data.summary) {
+            setError("awoakowkoakow");
+        }
+
       }
     } catch (err) {
       setError('Network error. Please try again.');

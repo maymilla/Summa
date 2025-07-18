@@ -1,4 +1,3 @@
-// app/api/summarize/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { HfInference } from '@huggingface/inference';
 
@@ -23,53 +22,37 @@ interface SummarizeResponse {
   error?: string;
 }
 
-export async function POST(request: NextRequest): Promise<NextResponse<SummarizeResponse>> {
+// Utility: Split text into ~400-word chunks (~1024 tokens)
+function chunkText(text: string, maxWords = 400): string[] {
+  const words = text.split(/\s+/);
+  const chunks: string[] = [];
+  for (let i = 0; i < words.length; i += maxWords) {
+    const chunk = words.slice(i, i + maxWords).join(' ');
+    chunks.push(chunk);
+  }
+  return chunks;
+}
+
+export async function POST(req: Request) {
   try {
-    const { text, maxLength = 150, minLength = 50, doSample = false }: SummarizeRequest = await request.json();
+    const { text } = await req.json();
 
-    // Validate input
-    if (!text || text.trim().length === 0) {
-      return NextResponse.json({
-        success: false,
-        error: 'Text is required and cannot be empty'
-      }, { status: 400 });
+    if (!text || typeof text !== 'string') {
+      return NextResponse.json({ error: 'Invalid input text' }, { status: 400 });
     }
 
-    // Check if text is too short (BART works better with longer texts)
-    if (text.trim().length < 50) {
-      return NextResponse.json({
-        success: false,
-        error: 'Text is too short for meaningful summarization. Please provide at least 50 characters.'
-      }, { status: 400 });
+    const chunks = chunkText(text);
+    const summaries: string[] = [];
+
+    for (const chunk of chunks) {
+      const result = await hf.summarization({
+        model: 'facebook/bart-large-cnn', 
+        inputs: chunk,
+      });
+      summaries.push(result.summary_text);
     }
 
-    // Check if text is too long (API limits)
-    if (text.length > 10000) {
-      return NextResponse.json({
-        success: false,
-        error: 'Text is too long. Please provide text under 10,000 characters.'
-      }, { status: 400 });
-    }
-
-    console.log('Summarizing text with BART model...');
-    console.log('Original text length:', text.length);
-
-    // Call Hugging Face BART model
-    const result = await hf.summarization({
-      model: 'facebook/bart-large-cnn',
-      inputs: text,
-      parameters: {
-        max_length: maxLength,
-        min_length: minLength,
-        do_sample: doSample,
-        // You can add more parameters:
-        // temperature: 0.7,
-        // top_p: 0.9,
-        // repetition_penalty: 1.1,
-      },
-    });
-
-    const summary = result.summary_text;
+    const summary = summaries.join(' ');
     const originalLength = text.length;
     const summaryLength = summary.length;
     const compressionRatio = Math.round((summaryLength / originalLength) * 100);
@@ -87,31 +70,30 @@ export async function POST(request: NextRequest): Promise<NextResponse<Summarize
     });
 
   } catch (error) {
-    console.error('Summarization error:', error);
-    
-    let errorMessage = 'An unexpected error occurred';
-    
-    if (error instanceof Error) {
-      errorMessage = error.message;
-      
-      // Handle specific Hugging Face API errors
-      if (error.message.includes('rate limit')) {
-        errorMessage = 'Rate limit exceeded. Please try again later.';
-      } else if (error.message.includes('model')) {
-        errorMessage = 'Model is currently unavailable. Please try again later.';
-      } else if (error.message.includes('timeout')) {
-        errorMessage = 'Request timeout. The text might be too long to process.';
-      }
-    }
+        console.error('Summarization error:', error);
+        
+        let errorMessage = 'An unexpected error occurred';
+        
+        if (error instanceof Error) {
+        errorMessage = error.message;
 
-    return NextResponse.json({
-      success: false,
-      error: errorMessage
-    }, { status: 500 });
+        if (error.message.includes('rate limit')) {
+            errorMessage = 'Rate limit exceeded. Please try again later.';
+        } else if (error.message.includes('model')) {
+            errorMessage = 'Model is currently unavailable. Please try again later.';
+        } else if (error.message.includes('timeout')) {
+            errorMessage = 'Request timeout. The text might be too long to process.';
+        }
+        }
+
+        return NextResponse.json({
+            success: false,
+            error: errorMessage
+        }, { status: 500 });
   }
 }
 
-// Optional: Add GET method to return model info
+// GET method to return model info
 export async function GET(): Promise<NextResponse> {
   return NextResponse.json({
     model: 'facebook/bart-large-cnn',
@@ -124,6 +106,7 @@ export async function GET(): Promise<NextResponse> {
 }
 
 // lib/summarization-service.ts
+// TODO: cek ini
 export class SummarizationService {
   private hf: HfInference;
   private readonly MODEL_NAME = 'facebook/bart-large-cnn';
@@ -198,37 +181,4 @@ export class SummarizationService {
   }
 }
 
-// Export singleton instance
 export const summarizationService = new SummarizationService();
-
-// Alternative API route using the service (app/api/summarize-service/route.ts)
-/*
-export async function POST(request: NextRequest): Promise<NextResponse> {
-  try {
-    const { text, maxLength, minLength, doSample }: SummarizeRequest = await request.json();
-
-    // Get optimal parameters if not provided
-    const optimalParams = summarizationService.getOptimalParameters(text.length);
-    const finalMaxLength = maxLength || optimalParams.maxLength;
-    const finalMinLength = minLength || optimalParams.minLength;
-
-    const result = await summarizationService.summarizeText(text, {
-      maxLength: finalMaxLength,
-      minLength: finalMinLength,
-      doSample: doSample
-    });
-
-    return NextResponse.json({
-      success: true,
-      ...result
-    });
-
-  } catch (error) {
-    console.error('Summarization service error:', error);
-    
-    return NextResponse.json({
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 });
-  }
-} */

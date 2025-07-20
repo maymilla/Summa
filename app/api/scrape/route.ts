@@ -8,6 +8,7 @@ interface ScrapedData {
   headings: string[];
   url: string;
   content: string[];
+  images?: string[];
 }
 
 const possibleContentSelectors = [
@@ -60,12 +61,28 @@ export async function GET(request: NextRequest) {
     //     }
     // }
 
+    const imageSrcs = $('img')
+    .map((i, el) => $(el).attr('src'))
+    .get()
+    .filter((src): src is string => !!src && !src.startsWith('data:') && !src.toLowerCase().includes('logo') && !src.toLowerCase().includes('icon')) 
+    .map((src) => {
+      if (src.startsWith('http')) return src;
+      if (src.startsWith('//')) return `https:${src}`;
+      try {
+        return new URL(src, url).href; 
+      } catch {
+        return '';
+      }
+    })
+    .filter(Boolean);
+
     const scrapedData: ScrapedData = {
       title: $('title').text().trim(),
       description: $('meta[name="description"]').attr('content')?.trim(),
       headings: $('h1, h2, h3').map((i, el) => $(el).text().trim()).get().filter(Boolean),
+      url,
       content: $('p').map((i, el) => $(el).text().trim()).get().filter(Boolean) ,
-      url
+      images: imageSrcs,
     };
 
     return NextResponse.json({ data: scrapedData });

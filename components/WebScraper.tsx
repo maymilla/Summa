@@ -6,6 +6,7 @@ interface ScrapedData {
   headings: string[];
   url: string;
   content: string[];
+  images?: string[];
 }
 
 interface ScrapeApiResponse {
@@ -125,6 +126,20 @@ return (
             <div className="data-item">
                 <h3>Content:</h3>
                 <p>{data.content}</p>
+            </div>
+            )}
+
+            {data.images && data.images.length > 0 && (
+            <div className="data-item">
+                <h3>Image urls:</h3>
+                <p>
+                    {data.images.map((img, index) => (
+                        <span key={index}>
+                        {img}
+                        <br />
+                        </span>
+                    ))}
+                </p>
             </div>
             )}
         </div>

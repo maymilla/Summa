@@ -17,7 +17,7 @@ export default function TopicCard({ id, title, description }: TopicCardProps) {
 
         {/* Content */}
         <div className="px-5 pb-5">
-          <h3 className="text-lg font-bold text-black leading-5 mb-2 h-10 overflow-y-auto overflow-x-hidden scrollbar-hide">
+          <h3 className="text-lg font-bold text-black leading-5 mb-0 h-10 overflow-y-auto overflow-x-hidden scrollbar-hide">
             {title}
           </h3>
           <p className="text-sm text-black font-normal leading-relaxed h-12 overflow-y-auto overflow-x-hidden scrollbar-hide">

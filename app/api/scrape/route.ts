@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import axios from 'axios';
 import * as cheerio from 'cheerio';
+import { spawn } from 'child_process';
+import path from 'path'
 
 interface ScrapedData {
   title: string;
@@ -37,14 +39,14 @@ export async function GET(request: NextRequest) {
         q: query,
         api_key: SERP_API_KEY,
         engine: 'google',
-        num: 5,
+        num: 10,
       }
     });
 
     const links: string[] = serpRes.data.organic_results
       ?.map((r: any) => r.link)
       ?.filter((link: string) => !!link)
-      .slice(0, 5);
+      .slice(0, 10);
 
     if (!links.length) {
       return NextResponse.json({ error: 'No search results found' }, { status: 404 });
@@ -68,14 +70,26 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    return NextResponse.json({ data: results });
+    const normalized = convertArticles(results);
+    const clustered = await runClusteringPython(normalized);
+
+    return NextResponse.json({ clustered });
+
   } catch (err) {
     console.error('General scraping error:', err);
     return NextResponse.json({ error: 'Unexpected error occurred' }, { status: 500 });
   }
 }
 
-// 🔧 Shared scraping logic
+interface ScrapedData {
+  title: string;
+  description?: string;
+  headings: string[];
+  url: string;
+  content: string[];
+  images?: string[];
+}
+
 async function scrapeUrl(url: string): Promise<ScrapedData> {
   const response = await axios.get(url, {
     headers: {
@@ -119,3 +133,70 @@ async function scrapeUrl(url: string): Promise<ScrapedData> {
     images: imageSrcs,
   };
 }
+
+type ArticleRaw = {
+  title: string;
+  description?: string;
+  content: string[];
+};
+
+function normalizeArticle(article: ArticleRaw): string {
+  const { title, description, content } = article;
+
+  const cleanedContent = content
+    .filter(line =>
+      line &&                          
+      !line.toLowerCase().includes('komentar') &&
+      !line.toLowerCase().includes('admin') &&
+      !line.toLowerCase().includes('redaksi') &&
+      !line.toLowerCase().includes('copyright') &&
+      !line.toLowerCase().includes('subscribe') &&
+      !line.toLowerCase().includes('po-content') && 
+      line.length > 20                              
+    )
+    .map(line => line.trim());
+
+  const fullText = [title, description, ...cleanedContent].filter(Boolean).join('\n');
+  return fullText;
+}
+
+export function convertArticles(rawArticles: ArticleRaw[]): string[] {
+  return rawArticles.map(normalizeArticle);
+}
+
+async function runClusteringPython(normalizedArticles: string[]) {
+  return new Promise((resolve, reject) => {
+    const pythonPath = 'python'; // pake python or python3??
+    const scriptPath = path.resolve(process.cwd(), 'python/cluster_perspective.py');
+
+    const childProcess = spawn(pythonPath, [scriptPath]);
+
+    let output = '';
+    let error = '';
+
+    childProcess.stdout.on('data', (data) => {
+      output += data.toString();
+    });
+
+    childProcess.stderr.on('data', (data) => {
+      error += data.toString();
+    });
+
+    childProcess.on('close', (code) => {
+      if (code === 0) {
+        try {
+          const parsed = JSON.parse(output);
+          resolve(parsed);
+        } catch (err) {
+          reject('Failed to parse Python output');
+        }
+      } else {
+        reject(error || `Python process exited with code ${code}`);
+      }
+    });
+
+    childProcess.stdin.write(JSON.stringify(normalizedArticles));
+    childProcess.stdin.end();
+  });
+}
+

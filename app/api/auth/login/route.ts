@@ -51,6 +51,14 @@ export async function POST(request: NextRequest) {
       maxAge: 60 * 60 * 24 * 7,
     });
 
+    // Also set user email for the /me endpoint
+    response.cookies.set('userEmail', user.email, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 60 * 60 * 24 * 7,
+    });
+
     return response;
 
   } catch (error) {

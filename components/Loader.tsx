@@ -47,12 +47,7 @@ const StyledWrapper = styled.div`
   .bar {
     width: 100%;
     height: 8px;
-    background: linear-gradient(
-      to right,
-      rgba(255, 105, 180, 0.5),
-      rgb(250, 210, 246),
-      rgba(255, 105, 180, 0.5)
-    );
+    background: linear-gradient(90deg, rgba(200, 185, 230, 0.9), rgba(190, 220, 240, 0.9), rgba(240, 190, 230, 0.9));
     background-size: 200% 100%;
     border-radius: 10px;
     animation: bar ease-in-out 3s infinite alternate-reverse;
@@ -87,10 +82,10 @@ const StyledWrapper = styled.div`
   }
   .svgIcon circle,
   line {
-    stroke: rgba(255, 105, 180, 0.7);
+    stroke: rgba(200, 185, 230, 0.8);
   }
   .svgIcon circle {
-    fill: rgba(255, 105, 180, 0.238);
+    fill: rgba(190, 220, 240, 0.3);
   }
 `;
 

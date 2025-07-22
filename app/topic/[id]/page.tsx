@@ -85,33 +85,37 @@ export default function TopicDetailPage({ params }: TopicDetailPageProps) {
   if (loading) {
     return (
       <div
-        className="min-h-screen w-full flex items-center justify-center"
+        className="min-h-screen w-full flex items-center justify-center smooth-transition"
         style={{
           background: "linear-gradient(180deg, #E2F1FF 0%, #F7F1FF 100%)",
         }}
       >
-        <Loader />
+        <div className="animate-fade-in">
+          <Loader />
+        </div>
       </div>
     );
   }
 
   if (error || !topic) {
     return (
-      <div className="min-h-screen w-full flex items-center justify-center">
-        <p className="text-xl text-gray-500">{error || 'Topic not found'}</p>
+      <div className="min-h-screen w-full flex items-center justify-center smooth-transition">
+        <div className="animate-fade-in">
+          <p className="text-xl text-gray-500">{error || 'Topic not found'}</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="gradient-bg">
+    <div className="gradient-bg smooth-transition">
       {/* Header */}
       <Header />
 
       {/* Main Content Container */}
-      <div className="container-responsive py-8 pb-16">
+      <div className="container-responsive py-8 pb-16 animate-fade-in">
         {/* Main Title */}
-        <div className="mb-8 px-4">
+        <div className="mb-8 px-4 animate-slide-down">
           <h1 className="text-xl sm:text-2xl md:text-[28px] font-bold text-black leading-normal text-left">
             {topic.judul}
           </h1>
@@ -123,19 +127,24 @@ export default function TopicDetailPage({ params }: TopicDetailPageProps) {
             const colors = ['rgb(250, 210, 246)', 'rgb(220, 204, 255)', 'rgb(196, 226, 255)'];
             const perspectiveSources = sources.filter(source => source.idpers === perspective.idpers);
             return (
-              <PerspectiveCard
+              <div 
                 key={perspective.idpers}
-                title={`Perspective ${perspective.idpers}`}
-                content={perspective.content}
-                sourcesColor={colors[index % colors.length]}
-                sources={perspectiveSources.map(source => source.sources)}
-              />
+                className="animate-slide-up smooth-transition"
+                style={{ animationDelay: `${index * 0.15}s` }}
+              >
+                <PerspectiveCard
+                  title={`Perspective ${perspective.idpers}`}
+                  content={perspective.content}
+                  sourcesColor={colors[index % colors.length]}
+                  sources={perspectiveSources.map(source => source.sources)}
+                />
+              </div>
             );
           })}
         </div>
 
         {/* Community Notes Section */}
-        <div className="mb-16">
+        <div className="mb-16 animate-slide-up" style={{ animationDelay: '0.3s' }}>
           <h2 className="text-lg sm:text-xl font-bold text-black text-left mb-6 px-4">
             Community Notes
           </h2>
@@ -143,12 +152,17 @@ export default function TopicDetailPage({ params }: TopicDetailPageProps) {
           {/* Community Note Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 justify-items-center">
             {communityNotes.map((note, index) => (
-              <CommunityNote
+              <div 
                 key={note.idcomm}
-                content={note.notes}
-                sources={[]}
-                colorCycle={index}
-              />
+                className="animate-slide-up smooth-transition"
+                style={{ animationDelay: `${0.4 + (index * 0.1)}s` }}
+              >
+                <CommunityNote
+                  content={note.notes}
+                  sources={[]}
+                  colorCycle={index}
+                />
+              </div>
             ))}
           </div>
         </div>

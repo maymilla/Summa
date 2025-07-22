@@ -253,3 +253,74 @@ html {
 .password-strength.weak { background-color: #ef4444; width: 33%; }
 .password-strength.medium { background-color: #f59e0b; width: 66%; }
 .password-strength.strong { background-color: #10b981; width: 100%; }
+
+/* Page transition animations */
+.animate-fade-in {
+  animation: fadeIn 0.6s ease-out forwards;
+}
+
+.animate-slide-up {
+  animation: slideUp 0.8s ease-out forwards;
+  opacity: 0;
+  transform: translateY(30px);
+}
+
+.animate-slide-down {
+  animation: slideDown 0.6s ease-out forwards;
+  opacity: 0;
+  transform: translateY(-20px);
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideDown {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Staggered animation support */
+.animate-slide-up[style*="animation-delay"] {
+  animation-fill-mode: both;
+}
+
+/* Enhanced hover effects for better interactivity */
+.topic-card-hover:hover {
+  transform: translateY(-4px) scale(1.02);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15);
+}
+
+/* Search input focus enhancement */
+.search-input:focus {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgba(59, 130, 246, 0.2);
+}
+
+/* Loading state for dynamic content */
+.content-loading {
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}

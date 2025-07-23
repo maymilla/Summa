@@ -485,10 +485,30 @@ async function savePerspectivesToDatabase(
         if (data.summary && data.summary.trim().length > 0) {
           console.log(`Saving perspective: ${perspectiveKey}`);
           
+          const perspectiveId = parseInt(perspectiveKey.replace('perspective_', ''));
+          
+          if (isNaN(perspectiveId)) {
+            throw new Error(`Invalid perspective key format: ${perspectiveKey}`);
+          }
+
+          const topicIdNum = parseInt(topicId);
+          if (isNaN(topicIdNum)) {
+            throw new Error(`Invalid topic ID: ${topicId}`);
+          }
+
+          await prisma.topic.upsert({
+            where: { idtopic: topicIdNum },
+            update: {}, 
+            create: {
+              idtopic: topicIdNum,
+              judul: 'Auto-generated Topic',
+              desc: 'Generated from scraping process'
+            }
+          });
+
           await prisma.perspective.create({
             data: {
-              idtopic: parseInt(topicId),
-              idpers: parseInt(perspectiveKey),
+              idtopic: topicIdNum,
               content: data.summary.trim(),
             },
           });
@@ -533,7 +553,12 @@ export async function GET(request: NextRequest) {
     }
 
     let normalizedArticles: string[];
-    let metadata: any;
+    let metadata: {
+      totalSearchResults: number;
+      successfulScrapes: number;
+      failedScrapes: number;
+      isDummyData: boolean;
+    };
 
     if (useReal && SERP_API_KEY) {
       // Real scraping logic (when you're ready to use it)
@@ -552,7 +577,7 @@ export async function GET(request: NextRequest) {
       });
 
       const links: string[] = serpRes.data.organic_results
-        ?.map((r: any) => r.link)
+        ?.map((r: { link: string }) => r.link)
         ?.filter((link: string) => {
           if (!link) return false;
           const blacklist = [

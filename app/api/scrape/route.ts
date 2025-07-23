@@ -3,6 +3,7 @@ import axios, { AxiosRequestConfig } from 'axios';
 import * as cheerio from 'cheerio';
 import { spawn } from 'child_process';
 import path from 'path';
+import { prisma } from '@/lib/prisma';
 
 interface ScrapedData {
   title: string;
@@ -13,6 +14,15 @@ interface ScrapedData {
   images?: string[];
   success: boolean;
   error?: string;
+}
+
+interface ClusterResult {
+  [perspectiveKey: string]: string[];
+}
+
+interface SummarizedCluster {
+  summary: string;
+  articles: string[];
 }
 
 const SERP_API_KEY = process.env.SERP_API_KEY;
@@ -27,11 +37,11 @@ const USER_AGENTS = [
 const getRandomUserAgent = () => USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)];
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-
-async function runClusteringPython(normalizedArticles: string[]): Promise<any> {
+// Python clustering 
+async function runClusteringPython(normalizedArticles: string[]): Promise<ClusterResult> {
   return new Promise((resolve, reject) => {
     if (normalizedArticles.length === 0) {
-      reject('No articles to cluster');
+      reject(new Error('No articles to cluster'));
       return;
     }
 
@@ -50,8 +60,8 @@ async function runClusteringPython(normalizedArticles: string[]): Promise<any> {
 
     const timeout = setTimeout(() => {
       childProcess.kill();
-      reject('Python clustering process timed out');
-    }, 120000); 
+      reject(new Error('Python clustering process timed out'));
+    }, 120000);
 
     childProcess.stdout.on('data', (data) => {
       output += data.toString();
@@ -72,133 +82,35 @@ async function runClusteringPython(normalizedArticles: string[]): Promise<any> {
           resolve(parsed);
         } catch (err) {
           console.error('Failed to parse Python output:', output);
-          reject('Failed to parse clustering results');
+          reject(new Error('Failed to parse clustering results'));
         }
       } else {
         console.error(`Python process exited with code ${code}`);
         console.error('Error output:', error);
-        reject(error || `Clustering process failed with code ${code}`);
+        reject(new Error(error || `Clustering process failed with code ${code}`));
       }
     });
 
     childProcess.on('error', (err) => {
       clearTimeout(timeout);
       console.error('Failed to start Python process:', err);
-      reject(`Failed to start clustering: ${err.message}`);
+      reject(new Error(`Failed to start clustering: ${err.message}`));
     });
 
     try {
-      // Send data to Python script
       childProcess.stdin.write(JSON.stringify(normalizedArticles));
       childProcess.stdin.end();
     } catch (err) {
       clearTimeout(timeout);
-      reject(`Failed to send data to Python: ${err}`);
+      reject(new Error(`Failed to send data to Python: ${err}`));
     }
   });
 }
 
-// export async function GET(request: NextRequest) {
-//   try {
-//     const { searchParams } = new URL(request.url);
-//     const query = searchParams.get('q');
-//     const urlParam = searchParams.get('url');
-
-//     if (urlParam) {
-//       console.log(`Single URL scraping: ${urlParam}`);
-//       const scraped = await scrapeUrlWithRetry(urlParam);
-//       return NextResponse.json({ data: scraped });
-//     }
-
-//     if (!query) {
-//       return NextResponse.json({ error: 'URL or query is required' }, { status: 400 });
-//     }
-
-//     if (!SERP_API_KEY) {
-//       return NextResponse.json({ error: 'Missing SERP_API_KEY' }, { status: 500 });
-//     }
-
-//     console.log(`Search query: ${query}`);
-
-//     // Search menggunakan SERP API
-//     const serpRes = await axios.get('https://serpapi.com/search.json', {
-//       params: {
-//         q: query,
-//         api_key: SERP_API_KEY,
-//         engine: 'google',
-//         num: 15, // Ambil lebih banyak untuk antisipasi yang gagal
-//         hl: 'id', // Prioritas bahasa Indonesia
-//         gl: 'id', // Geolocation Indonesia
-//       },
-//       timeout: 30000,
-//     });
-
-//     const links: string[] = serpRes.data.organic_results
-//       ?.map((r: any) => r.link)
-//       ?.filter((link: string) => {
-//         if (!link) return false;
-        
-//         // Filter out social media dan situs yang sulit di-scrape
-//         const blacklist = [
-//           'facebook.com', 'instagram.com', 'tiktok.com', 
-//           'youtube.com', 'twitter.com', 'x.com',
-//           'linkedin.com', 'pinterest.com'
-//         ];
-        
-//         return !blacklist.some(domain => link.includes(domain));
-//       })
-//       .slice(0, 10);
-
-//     if (!links.length) {
-//       return NextResponse.json({ error: 'No valid search results found' }, { status: 404 });
-//     }
-
-//     console.log(`Found ${links.length} URLs to scrape`);
-
-//     // Scraping dengan batch processing dan error handling yang lebih baik
-//     const results = await scrapeUrlsBatch(links);
-    
-//     // Filter hasil yang berhasil
-//     const successfulResults = results.filter(r => r.success && r.content.length > 0);
-//     const failedResults = results.filter(r => !r.success);
-
-//     console.log(`Scraping complete: ${successfulResults.length} successful, ${failedResults.length} failed`);
-
-//     if (successfulResults.length === 0) {
-//       return NextResponse.json({ 
-//         error: 'No articles could be scraped successfully',
-//         failures: failedResults.map(r => ({ url: r.url, error: r.error }))
-//       }, { status: 404 });
-//     }
-
-//     const normalized = convertArticles(successfulResults);
-//     console.log(`Normalized ${normalized.length} articles, running clustering...`);
-    
-//     const clustered = await runClusteringPython(normalized);
-
-//     return NextResponse.json({ 
-//       clustered,
-//       metadata: {
-//         totalSearchResults: links.length,
-//         successfulScrapes: successfulResults.length,
-//         failedScrapes: failedResults.length,
-//         failures: failedResults.map(r => ({ url: r.url, error: r.error }))
-//       }
-//     });
-
-//   } catch (err) {
-//     console.error('General scraping error:', err);
-//     return NextResponse.json({ 
-//       error: 'Unexpected error occurred',
-//       details: err instanceof Error ? err.message : 'Unknown error'
-//     }, { status: 500 });
-//   }
-// }
-
+// Scraping functions
 async function scrapeUrlsBatch(urls: string[], concurrency = 3): Promise<ScrapedData[]> {
   const results: ScrapedData[] = [];
   
-  // Process URLs in batches to avoid overwhelming servers
   for (let i = 0; i < urls.length; i += concurrency) {
     const batch = urls.slice(i, i + concurrency);
     console.log(`Processing batch ${Math.floor(i/concurrency) + 1}: ${batch.length} URLs`);
@@ -206,7 +118,6 @@ async function scrapeUrlsBatch(urls: string[], concurrency = 3): Promise<Scraped
     const batchPromises = batch.map(url => scrapeUrlWithRetry(url));
     const batchResults = await Promise.allSettled(batchPromises);
     
-    // Handle settled promises
     const batchData = batchResults.map((result, index) => {
       if (result.status === 'fulfilled') {
         return result.value;
@@ -226,9 +137,8 @@ async function scrapeUrlsBatch(urls: string[], concurrency = 3): Promise<Scraped
     
     results.push(...batchData);
     
-    // Rate limiting between batches
     if (i + concurrency < urls.length) {
-      const delayTime = 2000 + Math.random() * 2000; // 2-4 detik delay
+      const delayTime = 2000 + Math.random() * 2000;
       console.log(`Waiting ${Math.round(delayTime/1000)}s before next batch...`);
       await delay(delayTime);
     }
@@ -300,7 +210,7 @@ async function scrapeUrl(url: string): Promise<ScrapedData> {
         'Cache-Control': 'max-age=0',
         'Referer': 'https://www.google.com/',
       },
-      timeout: 45000, // 45 detik timeout
+      timeout: 45000,
       maxRedirects: 10,
       validateStatus: (status) => status >= 200 && status < 400,
     };
@@ -312,7 +222,6 @@ async function scrapeUrl(url: string): Promise<ScrapedData> {
     }
 
     const $ = cheerio.load(response.data);
-
     $('script, style, nav, header, footer, aside, .advertisement, .ads, .social-share, .comment').remove();
 
     let title = $('h1').first().text().trim() ||
@@ -322,8 +231,8 @@ async function scrapeUrl(url: string): Promise<ScrapedData> {
                 '';
 
     title = title
-      .replace(/\s*\|\s*.*$/, '') // Remove site name after |
-      .replace(/\s*-\s*.*$/, '')  // Remove site name after -
+      .replace(/\s*\|\s*.*$/, '')
+      .replace(/\s*-\s*.*$/, '')
       .trim();
 
     const description = $('meta[name="description"]').attr('content')?.trim() ||
@@ -334,7 +243,8 @@ async function scrapeUrl(url: string): Promise<ScrapedData> {
       .map((i, el) => $(el).text().trim())
       .get()
       .filter((heading) => heading && heading.length > 5 && heading.length < 200)
-      .slice(0, 10); 
+      .slice(0, 10);
+
     const contentSelectors = [
       'article p', '.article-content p', '.post-content p', '.content p',
       '.entry-content p', '.article-body p', '.story-content p', 
@@ -363,7 +273,7 @@ async function scrapeUrl(url: string): Promise<ScrapedData> {
         });
 
       if (paragraphs.length > 2) {
-        content = paragraphs.slice(0, 20); 
+        content = paragraphs.slice(0, 20);
         break;
       }
     }
@@ -388,7 +298,7 @@ async function scrapeUrl(url: string): Promise<ScrapedData> {
         }
       })
       .filter(Boolean)
-      .slice(0, 5); 
+      .slice(0, 5);
 
     if (!title && content.length === 0) {
       throw new Error('No meaningful content extracted');
@@ -426,6 +336,7 @@ async function scrapeUrl(url: string): Promise<ScrapedData> {
   }
 }
 
+// Article processing functions
 type ArticleRaw = {
   title: string;
   description?: string;
@@ -461,16 +372,18 @@ function normalizeArticle(article: ArticleRaw): string {
 
 export function convertArticles(rawArticles: ArticleRaw[]): string[] {
   return rawArticles
-    .filter(article => article.success !== false) 
+    .filter(article => article.success !== false)
     .map(normalizeArticle)
     .filter(text => text && text.length > 20);
 }
 
-const dummyArticles = [
+// Dummy data for testing
+const dummyArticles: ScrapedData[] = [
   {
     title: "Government Defends Fuel Price Hike as Necessary Reform",
     description: "Officials explain the rationale behind the subsidy cut and price increase",
     url: "https://example.com/fuel-policy-gov-defense",
+    headings: ["Government Position", "Economic Justification"],
     content: [
       "The Indonesian government announced a significant increase in fuel prices last week, citing the growing burden of energy subsidies on the national budget.",
       "According to the Ministry of Finance, the subsidy program was costing the state over 500 trillion rupiah annually, threatening other public spending priorities.",
@@ -484,8 +397,9 @@ const dummyArticles = [
     title: "Fuel Price Hike Triggers Nationwide Protests Among Students and Workers",
     description: "Demonstrations erupt in Jakarta and other cities over rising cost of living",
     url: "https://example.com/fuel-policy-protests",
+    headings: ["Public Reaction", "Protest Movement"],
     content: [
-      "Mass protests erupted across Indonesia following the government’s announcement of a fuel price hike.",
+      "Mass protests erupted across Indonesia following the government's announcement of a fuel price hike.",
       "Students, labor unions, and civil society groups took to the streets demanding the policy be reversed.",
       "Many protesters say the price increase will disproportionately harm low-income families and small businesses.",
       "Activists accuse the government of prioritizing fiscal discipline over people's welfare.",
@@ -497,8 +411,9 @@ const dummyArticles = [
     title: "Economists Say Fuel Subsidy Reform Is Long Overdue",
     description: "Experts argue the price hike is painful but economically sound",
     url: "https://example.com/fuel-policy-economists",
+    headings: ["Expert Analysis", "Economic Perspective"],
     content: [
-      "Several economists have voiced support for the Indonesian government’s decision to reduce fuel subsidies and raise prices.",
+      "Several economists have voiced support for the Indonesian government's decision to reduce fuel subsidies and raise prices.",
       "They note that energy subsidies often benefit the wealthy more than the poor, and distort market signals.",
       "According to economic analysts, the saved funds could be better spent on targeted programs such as education, healthcare, and social protection.",
       "Some warn that short-term inflation is inevitable, but stress that long-term benefits outweigh immediate costs.",
@@ -510,6 +425,7 @@ const dummyArticles = [
     title: "Environmentalists Back Fuel Price Hike to Reduce Emissions",
     description: "Green groups applaud reduction of fossil fuel dependence",
     url: "https://example.com/fuel-policy-environment",
+    headings: ["Environmental Impact", "Sustainability Goals"],
     content: [
       "Environmental organizations have expressed support for the fuel price hike, calling it a step toward sustainable energy policy.",
       "They argue that cheap fuel has encouraged overconsumption and high emissions in urban areas.",
@@ -523,8 +439,9 @@ const dummyArticles = [
     title: "Fuel Price Increase Sparks Political Tension Ahead of Elections",
     description: "Opposition parties criticize government over unpopular move",
     url: "https://example.com/fuel-policy-politics",
+    headings: ["Political Implications", "Electoral Impact"],
     content: [
-      "Opposition parties in Indonesia have seized on the fuel price hike to criticize the ruling administration’s economic policy.",
+      "Opposition parties in Indonesia have seized on the fuel price hike to criticize the ruling administration's economic policy.",
       "Several lawmakers claim the decision reflects poor planning and a failure to manage global economic pressures.",
       "Some political analysts believe the protests could influence voter sentiment ahead of the 2024 elections.",
       "The fuel policy may become a central campaign issue, with parties divided over subsidy reform.",
@@ -534,76 +451,183 @@ const dummyArticles = [
   }
 ];
 
+// Summarization function
+async function summarizeCluster(articles: string[], baseUrl: string): Promise<string> {
+  try {
+    const combinedText = articles.join('\n\n');
+    
+    const response = await fetch(`${baseUrl}/api/summarize`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: combinedText }),
+    });
 
-// Function to simulate the conversion process
-function createDummyNormalizedArticles() {
-  return dummyArticles.map(article => {
-    const { title, description, content } = article;
-    const textParts = [title, description, ...content].filter(Boolean);
-    return textParts.join('\n\n');
-  });
+    if (!response.ok) {
+      throw new Error(`Summarization failed: ${response.status}`);
+    }
+
+    const { summary } = await response.json();
+    return summary || 'No summary generated';
+  } catch (error) {
+    console.error('Summarization error:', error);
+    return 'Summary generation failed';
+  }
 }
 
-const normalizedArticles = createDummyNormalizedArticles();
+// Database save function
+async function savePerspectivesToDatabase(
+  summarizedClusters: Record<string, SummarizedCluster>,
+  topicId: string
+): Promise<any[]> {
+  const savePromises = Object.entries(summarizedClusters).map(
+    async ([perspectiveKey, data]) => {
+      try {
+        if (data.summary && data.summary.trim().length > 0) {
+          console.log(`Saving perspective: ${perspectiveKey}`);
+          
+          await prisma.perspective.create({
+            data: {
+              idtopic: parseInt(topicId),
+              idpers: parseInt(perspectiveKey),
+              content: data.summary.trim(),
+            },
+          });
+          
+          console.log(`Successfully saved perspective: ${perspectiveKey}`);
+          return { perspectiveKey, status: 'saved' };
+        } else {
+          console.log(`Skipping empty summary for: ${perspectiveKey}`);
+          return { perspectiveKey, status: 'skipped - empty summary' };
+        }
+      } catch (error) {
+        console.error(`Error saving perspective ${perspectiveKey}:`, error);
+        return { 
+          perspectiveKey, 
+          status: 'error', 
+          error: error instanceof Error ? error.message : 'Unknown error' 
+        };
+      }
+    }
+  );
 
-// GET untuk dummy:
+  return await Promise.all(savePromises);
+}
 
+// Main GET handler
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const query = searchParams.get('q');
+    const urlParam = searchParams.get('url');
+    const useReal = searchParams.get('real') === 'true'; // Flag to use real scraping
     
+    // Handle single URL scraping
+    if (urlParam) {
+      console.log(`Single URL scraping: ${urlParam}`);
+      const scraped = await scrapeUrlWithRetry(urlParam);
+      return NextResponse.json({ data: scraped });
+    }
+
     if (!query) {
       return NextResponse.json({ error: 'Query is required' }, { status: 400 });
     }
 
-    console.log(`Using dummy data for query: ${query}`);
-    
-    const normalized = createDummyNormalizedArticles();
-    console.log(`Using ${normalized.length} dummy articles, running clustering...`);
-    
-    const clustered = await runClusteringPython(normalized);
+    let normalizedArticles: string[];
+    let metadata: any;
 
-    // return NextResponse.json({ 
-    //   clustered,
-    //   metadata: {
-    //     totalSearchResults: dummyArticles.length,
-    //     successfulScrapes: dummyArticles.length,
-    //     failedScrapes: 0,
-    //     isDummyData: true
-    //   }
-    // });
+    if (useReal && SERP_API_KEY) {
+      // Real scraping logic (when you're ready to use it)
+      console.log(`Real search query: ${query}`);
+      
+      const serpRes = await axios.get('https://serpapi.com/search.json', {
+        params: {
+          q: query,
+          api_key: SERP_API_KEY,
+          engine: 'google',
+          num: 15,
+          hl: 'id',
+          gl: 'id',
+        },
+        timeout: 30000,
+      });
 
-     const summarizePromises = Object.entries(clustered).map(
-      async ([perspectiveKey, articles]) => {
-        // combine all articles in this cluster
-        const combinedText = (articles as string[]).join('\n');
+      const links: string[] = serpRes.data.organic_results
+        ?.map((r: any) => r.link)
+        ?.filter((link: string) => {
+          if (!link) return false;
+          const blacklist = [
+            'facebook.com', 'instagram.com', 'tiktok.com', 
+            'youtube.com', 'twitter.com', 'x.com',
+            'linkedin.com', 'pinterest.com'
+          ];
+          return !blacklist.some(domain => link.includes(domain));
+        })
+        .slice(0, 10);
 
-        // call your existing summarize route
-        const resp = await fetch(new URL('/api/summarize', request.url), {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text: combinedText }),
-        });
-
-        const { summary } = await resp.json();
-        return [perspectiveKey, { summary, articles }];
+      if (!links.length) {
+        return NextResponse.json({ error: 'No valid search results found' }, { status: 404 });
       }
-    );
 
-    // wait for all summaries
-    const summarizedEntries = await Promise.all(summarizePromises);
-    const summarizedClusters = Object.fromEntries(summarizedEntries);
+      const results = await scrapeUrlsBatch(links);
+      const successfulResults = results.filter(r => r.success && r.content.length > 0);
 
-    return NextResponse.json({
-      summarized: summarizedClusters,
-      metadata: {
+      if (successfulResults.length === 0) {
+        return NextResponse.json({ 
+          error: 'No articles could be scraped successfully'
+        }, { status: 404 });
+      }
+
+      normalizedArticles = convertArticles(successfulResults);
+      metadata = {
+        totalSearchResults: links.length,
+        successfulScrapes: successfulResults.length,
+        failedScrapes: results.length - successfulResults.length,
+        isDummyData: false
+      };
+    } else {
+      // Use dummy data
+      console.log(`Using dummy data for query: ${query}`);
+      normalizedArticles = convertArticles(dummyArticles);
+      metadata = {
         totalSearchResults: dummyArticles.length,
         successfulScrapes: dummyArticles.length,
         failedScrapes: 0,
         isDummyData: true
+      };
+    }
+
+    console.log(`Processing ${normalizedArticles.length} articles, running clustering...`);
+    
+    const clustered = await runClusteringPython(normalizedArticles);
+
+    // Create base URL for summarization API call
+    const protocol = request.headers.get('x-forwarded-proto') || 'http';
+    const host = request.headers.get('host') || 'localhost:3000';
+    const baseUrl = `${protocol}://${host}`;
+
+    const summarizePromises = Object.entries(clustered).map(
+      async ([perspectiveKey, articles]): Promise<[string, SummarizedCluster]> => {
+        const summary = await summarizeCluster(articles, baseUrl);
+        return [perspectiveKey, { summary, articles }];
       }
-    })
+    );
+
+    const summarizedEntries = await Promise.all(summarizePromises);
+    const summarizedClusters = Object.fromEntries(summarizedEntries);
+
+    // Save to database
+    const topicId = "1"; 
+    const saveResults = await savePerspectivesToDatabase(summarizedClusters, topicId);
+    
+    console.log('Database save results:', saveResults);
+
+    return NextResponse.json({
+      summarized: summarizedClusters,
+      metadata: {
+        ...metadata,
+        saveResults
+      }
+    });
 
   } catch (err) {
     console.error('General error:', err);
@@ -613,8 +637,3 @@ export async function GET(request: NextRequest) {
     }, { status: 500 });
   }
 }
-
-
-console.log('Sample normalized article:');
-console.log(normalizedArticles[0]);
-console.log('\nTotal articles:', normalizedArticles.length);

@@ -30,6 +30,11 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { idpers, notes, userEmail } = body;
 
+    // Check if user email is provided
+    if (!userEmail) {
+      return NextResponse.json({ error: 'Authentication required. Please log in.' }, { status: 401 });
+    }
+
     const perspective = await prisma.perspective.findUnique({
       where: { idpers: parseInt(idpers) },
     });
@@ -43,7 +48,7 @@ export async function POST(request: Request) {
     });
 
     if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+      return NextResponse.json({ error: 'User not found. Please log in again.' }, { status: 404 });
     }
 
     const comm = await prisma.comm.create({

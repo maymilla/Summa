@@ -2,9 +2,10 @@
 
 import { use, useState, useEffect } from "react";
 import Header from "../../../components/Header";
-import PerspectiveCard from "../../../components/PerspectiveCard";
-import CommunityNote from "../../../components/CommunityNote";
+import PerspectiveWithCommunityNotes from "../../../components/PerspectiveWithCommunityNotes";
+import AddNoteModal from "../../../components/AddNoteModal";
 import Loader from "../../../components/Loader";
+import { useModal } from "../../../contexts/ModalContext";
 
 interface TopicDetailPageProps {
   params: Promise<{
@@ -44,6 +45,26 @@ export default function TopicDetailPage({ params }: TopicDetailPageProps) {
   const [sources, setSources] = useState<Source[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // Modal state
+  const { openModal, closeModal, isModalOpen } = useModal();
+  const [selectedPerspectiveId, setSelectedPerspectiveId] = useState<number | null>(null);
+  const modalId = 'add-note-modal';
+
+  const handleAddNoteClick = (perspectiveId: number) => {
+    setSelectedPerspectiveId(perspectiveId);
+    openModal(modalId);
+  };
+
+  const handleCloseModal = () => {
+    setSelectedPerspectiveId(null);
+    closeModal();
+  };
+
+  const handleModalSubmit = () => {
+    // This will be called after successful note submission
+    handleCloseModal();
+  };
 
   useEffect(() => {
     const fetchTopicData = async () => {
@@ -121,7 +142,7 @@ export default function TopicDetailPage({ params }: TopicDetailPageProps) {
           </h1>
         </div>
 
-        {/* Perspective Cards */}
+        {/* Perspective Cards with Community Notes */}
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mb-12 justify-items-center">
           {topic.perspectives.map((perspective, index) => {
             const colors = ['rgb(250, 210, 246)', 'rgb(220, 204, 255)', 'rgb(196, 226, 255)'];
@@ -132,41 +153,28 @@ export default function TopicDetailPage({ params }: TopicDetailPageProps) {
                 className="animate-slide-up smooth-transition"
                 style={{ animationDelay: `${index * 0.15}s` }}
               >
-                <PerspectiveCard
+                <PerspectiveWithCommunityNotes
+                  perspectiveId={perspective.idpers}
                   title={`Perspective ${perspective.idpers}`}
                   content={perspective.content}
                   sourcesColor={colors[index % colors.length]}
                   sources={perspectiveSources.map(source => source.sources)}
+                  communityNotes={communityNotes}
+                  onAddNoteClick={handleAddNoteClick}
                 />
               </div>
             );
           })}
         </div>
-
-        {/* Community Notes Section */}
-        <div className="mb-16 animate-slide-up" style={{ animationDelay: '0.3s' }}>
-          <h2 className="text-lg sm:text-xl font-bold text-black text-left mb-6 px-4">
-            Community Notes
-          </h2>
-          
-          {/* Community Note Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 justify-items-center">
-            {communityNotes.map((note, index) => (
-              <div 
-                key={note.idcomm}
-                className="animate-slide-up smooth-transition"
-                style={{ animationDelay: `${0.4 + (index * 0.1)}s` }}
-              >
-                <CommunityNote
-                  content={note.notes}
-                  sources={[]}
-                  colorCycle={index}
-                />
-              </div>
-            ))}
-          </div>
-        </div>
       </div>
+      
+      {/* Add Note Modal */}
+      <AddNoteModal
+        isOpen={isModalOpen(modalId)}
+        onClose={handleCloseModal}
+        perspectiveId={selectedPerspectiveId || 0}
+        onSubmit={handleModalSubmit}
+      />
     </div>
   );
 }

@@ -53,6 +53,8 @@ model Comm {
   idpers    Int
   notes     String
   userEmail String
+  upvote    Int @default(0)
+  downvote  Int @default(0)
   
   // Relations
   perspective Perspective @relation(fields: [idpers], references: [idpers], onDelete: Cascade)
@@ -65,6 +67,8 @@ model Source {
   idsource Int @id @default(autoincrement())
   idpers   Int
   sources  String
+  upvote   Int @default(0)
+  downvote Int @default(0)
   
   // Relations
   perspective Perspective @relation(fields: [idpers], references: [idpers], onDelete: Cascade)

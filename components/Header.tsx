@@ -56,7 +56,6 @@ export default function Header() {
       });
       setUser(null);
       setIsProfileOpen(false);
-      // Redirect to login page
       window.location.href = '/auth/login';
     } catch (error) {
       console.error('Logout failed:', error);
@@ -98,7 +97,7 @@ export default function Header() {
       <div className="relative ml-auto" ref={profileRef}>
         <button
           onClick={() => setIsProfileOpen(!isProfileOpen)}
-          className="w-[40px] h-[40px] sm:w-[50px] sm:h-[50px] bg-[#D9D9D9] rounded-full flex-shrink-0 hover:bg-gray-300 transition-colors focus:outline-none focus:ring-2 focus:ring-black focus:ring-opacity-20"
+          className="w-[40px] h-[40px] sm:w-[50px] sm:h-[50px] bg-[#D9D9D9] rounded-full flex-shrink-0 hover:bg-gray-300 transition-colors focus:outline-none"
         />
         
         {/* Profile Dropdown */}
@@ -117,7 +116,7 @@ export default function Header() {
             {/* Logout Button */}
             <button 
               onClick={handleLogout}
-              className="w-full inline-flex items-center justify-center px-4 py-2.5 text-sm font-medium text-black bg-gray-100 hover:bg-gray-200 rounded-[16px] transition-colors focus:outline-none focus:ring-2 focus:ring-black focus:ring-opacity-20"
+              className="w-full inline-flex items-center justify-center px-4 py-2.5 text-sm font-medium text-white bg-black hover:bg-gray-800 rounded-[16px] transition-colors focus:outline-0 focus:ring-2 focus:ring-black focus:ring-opacity-20"
             >
               Logout
             </button>

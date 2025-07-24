@@ -21,9 +21,16 @@ interface ClusterResult {
   [perspectiveKey: string]: string[];
 }
 
-interface SummarizedCluster {
-  summary: string;
-  articles: string[];
+interface SerpApiResult {
+  link: string;
+  title?: string;
+  snippet?: string;
+  [key: string]: unknown;
+}
+
+interface SerpApiResponse {
+  organic_results?: SerpApiResult[];
+  [key: string]: unknown;
 }
 
 const SERP_API_KEY = process.env.SERP_API_KEY;
@@ -82,7 +89,7 @@ async function runClusteringPython(normalizedArticles: string[]): Promise<Cluste
           console.log('Clustering completed successfully');
           resolve(parsed);
         } catch (err) {
-          console.error('Failed to parse Python output:', output);
+          console.error('Failed to parse Python output:', output, 'error: ', err);
           reject(new Error('Failed to parse clustering results'));
         }
       } else {
@@ -399,7 +406,7 @@ async function summarizeCluster(articles: string[], baseUrl: string): Promise<st
 
     const chunks = chunkText(combinedText, MAX_CHUNK_LENGTH);
 
-    let summaries: string[] = [];
+    const summaries: string[] = [];
     for (const chunk of chunks) {
       const response = await fetch(`${baseUrl}/api/summarize`, {
         method: 'POST',
@@ -420,64 +427,6 @@ async function summarizeCluster(articles: string[], baseUrl: string): Promise<st
     console.error('Summarization error:', error);
     return 'Summary generation failed';
   }
-}
-
-async function savePerspectivesToDatabase(
-  summarizedClusters: Record<string, SummarizedCluster>,
-  topicId: string
-): Promise<any[]> {
-  const savePromises = Object.entries(summarizedClusters).map(
-    async ([perspectiveKey, data]) => {
-      try {
-        if (data.summary && data.summary.trim().length > 0) {
-          console.log(`Saving perspective: ${perspectiveKey}`);
-          
-          const perspectiveId = parseInt(perspectiveKey.replace('perspective_', ''));
-          
-          if (isNaN(perspectiveId)) {
-            throw new Error(`Invalid perspective key format: ${perspectiveKey}`);
-          }
-
-          const topicIdNum = parseInt(topicId);
-          if (isNaN(topicIdNum)) {
-            throw new Error(`Invalid topic ID: ${topicId}`);
-          }
-
-          await prisma.topic.upsert({
-            where: { idtopic: topicIdNum },
-            update: {}, 
-            create: {
-              idtopic: topicIdNum,
-              judul: 'Auto-generated Topic',
-              desc: 'Generated from scraping process'
-            }
-          });
-
-          await prisma.perspective.create({
-            data: {
-              idtopic: topicIdNum,
-              content: data.summary.trim(),
-            },
-          });
-          
-          console.log(`Successfully saved perspective: ${perspectiveKey}`);
-          return { perspectiveKey, status: 'saved' };
-        } else {
-          console.log(`Skipping empty summary for: ${perspectiveKey}`);
-          return { perspectiveKey, status: 'skipped - empty summary' };
-        }
-      } catch (error) {
-        console.error(`Error saving perspective ${perspectiveKey}:`, error);
-        return { 
-          perspectiveKey, 
-          status: 'error', 
-          error: error instanceof Error ? error.message : 'Unknown error' 
-        };
-      }
-    }
-  );
-
-  return await Promise.all(savePromises);
 }
 
 
@@ -509,7 +458,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Missing SERP_API_KEY' }, { status: 500 });
     }
 
-    const serpRes = await axios.get('https://serpapi.com/search.json', {
+    const serpRes = await axios.get<SerpApiResponse>('https://serpapi.com/search.json', {
       params: {
         q: query,
         api_key: SERP_API_KEY,
@@ -522,7 +471,7 @@ export async function GET(request: NextRequest) {
     });
 
     const links: string[] = serpRes.data.organic_results
-      ?.map((r: any) => r.link)
+      ?.map((r: SerpApiResult) => r.link)
       ?.filter((link: string) => {
         if (!link) return false;
 
@@ -534,7 +483,7 @@ export async function GET(request: NextRequest) {
 
         return !blacklist.some(domain => link.includes(domain));
       })
-      .slice(0, 10);
+      .slice(0, 10) || [];
 
     if (!links.length) {
       return NextResponse.json({ error: 'No valid search results found' }, { status: 404 });
@@ -570,7 +519,7 @@ const host = request.headers.get('host') || 'localhost:3000';
 const baseUrl = `${protocol}://${host}`;
 
 const summarizePromises = Object.entries(summarized).map(
-  async ([perspectiveKey, articles]) => {
+  async ([, articles]) => {
     // articles: string[]
     const summary = await summarizeCluster(articles, baseUrl);
     return {

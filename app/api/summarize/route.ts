@@ -1,26 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { HfInference } from '@huggingface/inference';
 
 // Initialize Hugging Face client
 const hf = new HfInference(process.env.HUGGINGFACE_API_KEY);
-
-// Request interface
-interface SummarizeRequest {
-  text: string;
-  maxLength?: number;
-  minLength?: number;
-  doSample?: boolean;
-}
-
-// Response interface
-interface SummarizeResponse {
-  success: boolean;
-  summary?: string;
-  originalLength?: number;
-  summaryLength?: number;
-  compressionRatio?: number;
-  error?: string;
-}
 
 // Utility: Split text into ~400-word chunks (~1024 tokens)
 function chunkText(text: string, maxWords = 400): string[] {

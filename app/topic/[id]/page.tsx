@@ -1,3 +1,4 @@
+//topic/[id]/page.tsx
 "use client";
 
 import { use, useState, useEffect } from "react";

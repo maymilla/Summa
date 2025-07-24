@@ -1,3 +1,4 @@
+// api/scrape/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import axios, { AxiosRequestConfig } from 'axios';
 import * as cheerio from 'cheerio';
@@ -533,130 +534,251 @@ async function savePerspectivesToDatabase(
   return await Promise.all(savePromises);
 }
 
-// Main GET handler
+// // Main GET handler
+// export async function GET(request: NextRequest) {
+//   try {
+//     const { searchParams } = new URL(request.url);
+//     const query = searchParams.get('q');
+//     const urlParam = searchParams.get('url');
+//     const useReal = searchParams.get('real') === 'true'; // Flag to use real scraping
+    
+//     // Handle single URL scraping
+//     if (urlParam) {
+//       console.log(`Single URL scraping: ${urlParam}`);
+//       const scraped = await scrapeUrlWithRetry(urlParam);
+//       return NextResponse.json({ data: scraped });
+//     }
+
+//     if (!query) {
+//       return NextResponse.json({ error: 'Query is required' }, { status: 400 });
+//     }
+
+//     let normalizedArticles: string[];
+//     let metadata: {
+//       totalSearchResults: number;
+//       successfulScrapes: number;
+//       failedScrapes: number;
+//       isDummyData: boolean;
+//     };
+
+//     if (useReal && SERP_API_KEY) {
+//       // Real scraping logic (when you're ready to use it)
+//       console.log(`Real search query: ${query}`);
+      
+//       const serpRes = await axios.get('https://serpapi.com/search.json', {
+//         params: {
+//           q: query,
+//           api_key: SERP_API_KEY,
+//           engine: 'google',
+//           num: 15,
+//           hl: 'id',
+//           gl: 'id',
+//         },
+//         timeout: 30000,
+//       });
+
+//       const links: string[] = serpRes.data.organic_results
+//         ?.map((r: { link: string }) => r.link)
+//         ?.filter((link: string) => {
+//           if (!link) return false;
+//           const blacklist = [
+//             'facebook.com', 'instagram.com', 'tiktok.com', 
+//             'youtube.com', 'twitter.com', 'x.com',
+//             'linkedin.com', 'pinterest.com'
+//           ];
+//           return !blacklist.some(domain => link.includes(domain));
+//         })
+//         .slice(0, 10);
+
+//       if (!links.length) {
+//         return NextResponse.json({ error: 'No valid search results found' }, { status: 404 });
+//       }
+
+//       const results = await scrapeUrlsBatch(links);
+//       const successfulResults = results.filter(r => r.success && r.content.length > 0);
+
+//       if (successfulResults.length === 0) {
+//         return NextResponse.json({ 
+//           error: 'No articles could be scraped successfully'
+//         }, { status: 404 });
+//       }
+
+//       normalizedArticles = convertArticles(successfulResults);
+//       metadata = {
+//         totalSearchResults: links.length,
+//         successfulScrapes: successfulResults.length,
+//         failedScrapes: results.length - successfulResults.length,
+//         isDummyData: false
+//       };
+//     } else {
+//       // Use dummy data
+//       console.log(`Using dummy data for query: ${query}`);
+//       normalizedArticles = convertArticles(dummyArticles);
+//       metadata = {
+//         totalSearchResults: dummyArticles.length,
+//         successfulScrapes: dummyArticles.length,
+//         failedScrapes: 0,
+//         isDummyData: true
+//       };
+//     }
+
+//     console.log(`Processing ${normalizedArticles.length} articles, running clustering...`);
+    
+//     const clustered = await runClusteringPython(normalizedArticles);
+
+//     // Create base URL for summarization API call
+//     const protocol = request.headers.get('x-forwarded-proto') || 'http';
+//     const host = request.headers.get('host') || 'localhost:3000';
+//     const baseUrl = `${protocol}://${host}`;
+
+//     const summarizePromises = Object.entries(clustered).map(
+//       async ([perspectiveKey, articles]): Promise<[string, SummarizedCluster]> => {
+//         const summary = await summarizeCluster(articles, baseUrl);
+//         return [perspectiveKey, { summary, articles }];
+//       }
+//     );
+
+//     const summarizedEntries = await Promise.all(summarizePromises);
+//     const summarizedClusters = Object.fromEntries(summarizedEntries);
+
+//     // Save to database
+//     const topicId = "1"; 
+//     const saveResults = await savePerspectivesToDatabase(summarizedClusters, topicId);
+    
+//     console.log('Database save results:', saveResults);
+
+//     return NextResponse.json({
+//       summarized: summarizedClusters,
+//       metadata: {
+//         ...metadata,
+//         saveResults
+//       }
+//     });
+
+//   } catch (err) {
+//     console.error('General error:', err);
+//     return NextResponse.json({ 
+//       error: 'Unexpected error occurred',
+//       details: err instanceof Error ? err.message : 'Unknown error'
+//     }, { status: 500 });
+//   }
+// }
+
+
+type ClusteredSummary = {
+  [key: string]: {
+    summary: string;
+    articles: string[];
+  };
+};
+
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const query = searchParams.get('q');
-    const urlParam = searchParams.get('url');
-    const useReal = searchParams.get('real') === 'true'; // Flag to use real scraping
-    
-    // Handle single URL scraping
-    if (urlParam) {
-      console.log(`Single URL scraping: ${urlParam}`);
-      const scraped = await scrapeUrlWithRetry(urlParam);
-      return NextResponse.json({ data: scraped });
+    const query = searchParams.get('search')?.trim();
+
+    if (!query || query.length < 2) {
+      return NextResponse.json({ error: 'Search query too short or missing' }, { status: 400 });
     }
 
-    if (!query) {
-      return NextResponse.json({ error: 'Query is required' }, { status: 400 });
-    }
-
-    let normalizedArticles: string[];
-    let metadata: {
-      totalSearchResults: number;
-      successfulScrapes: number;
-      failedScrapes: number;
-      isDummyData: boolean;
-    };
-
-    if (useReal && SERP_API_KEY) {
-      // Real scraping logic (when you're ready to use it)
-      console.log(`Real search query: ${query}`);
-      
-      const serpRes = await axios.get('https://serpapi.com/search.json', {
-        params: {
-          q: query,
-          api_key: SERP_API_KEY,
-          engine: 'google',
-          num: 15,
-          hl: 'id',
-          gl: 'id',
-        },
-        timeout: 30000,
-      });
-
-      const links: string[] = serpRes.data.organic_results
-        ?.map((r: { link: string }) => r.link)
-        ?.filter((link: string) => {
-          if (!link) return false;
-          const blacklist = [
-            'facebook.com', 'instagram.com', 'tiktok.com', 
-            'youtube.com', 'twitter.com', 'x.com',
-            'linkedin.com', 'pinterest.com'
-          ];
-          return !blacklist.some(domain => link.includes(domain));
-        })
-        .slice(0, 10);
-
-      if (!links.length) {
-        return NextResponse.json({ error: 'No valid search results found' }, { status: 404 });
-      }
-
-      const results = await scrapeUrlsBatch(links);
-      const successfulResults = results.filter(r => r.success && r.content.length > 0);
-
-      if (successfulResults.length === 0) {
-        return NextResponse.json({ 
-          error: 'No articles could be scraped successfully'
-        }, { status: 404 });
-      }
-
-      normalizedArticles = convertArticles(successfulResults);
-      metadata = {
-        totalSearchResults: links.length,
-        successfulScrapes: successfulResults.length,
-        failedScrapes: results.length - successfulResults.length,
-        isDummyData: false
-      };
-    } else {
-      // Use dummy data
-      console.log(`Using dummy data for query: ${query}`);
-      normalizedArticles = convertArticles(dummyArticles);
-      metadata = {
-        totalSearchResults: dummyArticles.length,
-        successfulScrapes: dummyArticles.length,
-        failedScrapes: 0,
-        isDummyData: true
-      };
-    }
-
-    console.log(`Processing ${normalizedArticles.length} articles, running clustering...`);
-    
-    const clustered = await runClusteringPython(normalizedArticles);
-
-    // Create base URL for summarization API call
-    const protocol = request.headers.get('x-forwarded-proto') || 'http';
-    const host = request.headers.get('host') || 'localhost:3000';
-    const baseUrl = `${protocol}://${host}`;
-
-    const summarizePromises = Object.entries(clustered).map(
-      async ([perspectiveKey, articles]): Promise<[string, SummarizedCluster]> => {
-        const summary = await summarizeCluster(articles, baseUrl);
-        return [perspectiveKey, { summary, articles }];
-      }
-    );
-
-    const summarizedEntries = await Promise.all(summarizePromises);
-    const summarizedClusters = Object.fromEntries(summarizedEntries);
-
-    // Save to database
-    const topicId = "1"; 
-    const saveResults = await savePerspectivesToDatabase(summarizedClusters, topicId);
-    
-    console.log('Database save results:', saveResults);
-
-    return NextResponse.json({
-      summarized: summarizedClusters,
-      metadata: {
-        ...metadata,
-        saveResults
+    // 1. Cek di DB
+    const found = await prisma.topic.findMany({
+      where: {
+        OR: [
+          { judul: { contains: query, mode: 'insensitive' } },
+          { desc: { contains: query, mode: 'insensitive' } }
+        ]
       }
     });
 
+    if (found.length > 0) {
+      return NextResponse.json(found, { status: 200 });
+    }
+
+    // 2. Jika tidak ada di DB, lanjut scraping via SERP API
+    if (!SERP_API_KEY) {
+      return NextResponse.json({ error: 'Missing SERP_API_KEY' }, { status: 500 });
+    }
+
+    const serpRes = await axios.get('https://serpapi.com/search.json', {
+      params: {
+        q: query,
+        api_key: SERP_API_KEY,
+        engine: 'google',
+        num: 15,
+        hl: 'id',
+        gl: 'id',
+      },
+      timeout: 30000,
+    });
+
+    const links: string[] = serpRes.data.organic_results
+      ?.map((r: any) => r.link)
+      ?.filter((link: string) => {
+        if (!link) return false;
+
+        const blacklist = [
+          'facebook.com', 'instagram.com', 'tiktok.com',
+          'youtube.com', 'twitter.com', 'x.com',
+          'linkedin.com', 'pinterest.com'
+        ];
+
+        return !blacklist.some(domain => link.includes(domain));
+      })
+      .slice(0, 10);
+
+    if (!links.length) {
+      return NextResponse.json({ error: 'No valid search results found' }, { status: 404 });
+    }
+
+    const results = await scrapeUrlsBatch(links);
+
+    const successfulResults = results.filter(r => r.success && r.content.length > 0);
+    const failedResults = results.filter(r => !r.success);
+
+    if (successfulResults.length === 0) {
+      return NextResponse.json({
+        error: 'No articles could be scraped successfully',
+        failures: failedResults.map(r => ({ url: r.url, error: r.error }))
+      }, { status: 404 });
+    }
+
+    const normalized = convertArticles(successfulResults);
+
+
+    console.log("Run clustering result:", await runClusteringPython(normalized));
+
+    const { summarized }: { summarized: ClusteredSummary } = await runClusteringPython(normalized);
+
+    const perspectivesData = Object.values(summarized);
+
+    const newTopic = await prisma.topic.create({
+      data: {
+        judul: query,
+        desc: perspectivesData[0]?.summary?.slice(0, 300) ?? 'Deskripsi tidak tersedia',
+        perspectives: {
+          create: perspectivesData.map(p => ({
+            content: p.summary,
+            sources: {
+              create: p.articles.map(a => ({ sources: a }))
+            }
+          }))
+        }
+      },
+      include: {
+        perspectives: {
+          include: { sources: true }
+        }
+      }
+    });
+
+
+    return NextResponse.json([newTopic], { status: 201 });
+
   } catch (err) {
-    console.error('General error:', err);
-    return NextResponse.json({ 
+    console.error('General scraping error:', err);
+    return NextResponse.json({
       error: 'Unexpected error occurred',
       details: err instanceof Error ? err.message : 'Unknown error'
     }, { status: 500 });

@@ -22,7 +22,7 @@ export default function ExplorePage() {
         if (response.ok) {
           const data = await response.json();
           setTopics(data);
-          setFeaturedTopics(data.slice(0, 3));
+          setFeaturedTopics(data.slice(0, 5));
         }
       } catch (error) {
         console.error('Error fetching topics:', error);

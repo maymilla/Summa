@@ -105,7 +105,11 @@ export default function SearchPage() {
             : "flex-grow flex items-center justify-center px-4" 
         }`}
       >
+
         <div className="relative w-full max-w-[603px] mx-auto">
+          <div className={`w-full flex flex-col smooth-transition text-black text-3xl justify-center pt-8 px-4 text-center p-10`}>
+            <h2>Discover diverse perspectives.</h2>
+          </div>
           <input
             type="text"
             value={searchQuery}

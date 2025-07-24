@@ -378,104 +378,50 @@ export function convertArticles(rawArticles: ArticleRaw[]): string[] {
     .filter(text => text && text.length > 20);
 }
 
-// Dummy data for testing
-const dummyArticles: ScrapedData[] = [
-  {
-    title: "Government Defends Fuel Price Hike as Necessary Reform",
-    description: "Officials explain the rationale behind the subsidy cut and price increase",
-    url: "https://example.com/fuel-policy-gov-defense",
-    headings: ["Government Position", "Economic Justification"],
-    content: [
-      "The Indonesian government announced a significant increase in fuel prices last week, citing the growing burden of energy subsidies on the national budget.",
-      "According to the Ministry of Finance, the subsidy program was costing the state over 500 trillion rupiah annually, threatening other public spending priorities.",
-      "Officials argue that the adjustment is crucial for long-term fiscal stability and to redirect funds toward education, healthcare, and infrastructure.",
-      "President Joko Widodo emphasized that the decision was not easy but necessary for national economic health.",
-      "The government pledged direct cash assistance to 20 million low-income households to cushion the impact."
-    ],
-    success: true
-  },
-  {
-    title: "Fuel Price Hike Triggers Nationwide Protests Among Students and Workers",
-    description: "Demonstrations erupt in Jakarta and other cities over rising cost of living",
-    url: "https://example.com/fuel-policy-protests",
-    headings: ["Public Reaction", "Protest Movement"],
-    content: [
-      "Mass protests erupted across Indonesia following the government's announcement of a fuel price hike.",
-      "Students, labor unions, and civil society groups took to the streets demanding the policy be reversed.",
-      "Many protesters say the price increase will disproportionately harm low-income families and small businesses.",
-      "Activists accuse the government of prioritizing fiscal discipline over people's welfare.",
-      "In some regions, demonstrations turned tense as police deployed tear gas to disperse crowds."
-    ],
-    success: true
-  },
-  {
-    title: "Economists Say Fuel Subsidy Reform Is Long Overdue",
-    description: "Experts argue the price hike is painful but economically sound",
-    url: "https://example.com/fuel-policy-economists",
-    headings: ["Expert Analysis", "Economic Perspective"],
-    content: [
-      "Several economists have voiced support for the Indonesian government's decision to reduce fuel subsidies and raise prices.",
-      "They note that energy subsidies often benefit the wealthy more than the poor, and distort market signals.",
-      "According to economic analysts, the saved funds could be better spent on targeted programs such as education, healthcare, and social protection.",
-      "Some warn that short-term inflation is inevitable, but stress that long-term benefits outweigh immediate costs.",
-      "They encourage the government to pair the reform with transparent communication and strong safety nets."
-    ],
-    success: true
-  },
-  {
-    title: "Environmentalists Back Fuel Price Hike to Reduce Emissions",
-    description: "Green groups applaud reduction of fossil fuel dependence",
-    url: "https://example.com/fuel-policy-environment",
-    headings: ["Environmental Impact", "Sustainability Goals"],
-    content: [
-      "Environmental organizations have expressed support for the fuel price hike, calling it a step toward sustainable energy policy.",
-      "They argue that cheap fuel has encouraged overconsumption and high emissions in urban areas.",
-      "The policy may incentivize the use of public transport and cleaner alternatives like electric vehicles.",
-      "Activists urge the government to reinvest subsidy savings into renewable energy development.",
-      "They caution, however, that reforms must be paired with equitable access to green transportation for low-income groups."
-    ],
-    success: true
-  },
-  {
-    title: "Fuel Price Increase Sparks Political Tension Ahead of Elections",
-    description: "Opposition parties criticize government over unpopular move",
-    url: "https://example.com/fuel-policy-politics",
-    headings: ["Political Implications", "Electoral Impact"],
-    content: [
-      "Opposition parties in Indonesia have seized on the fuel price hike to criticize the ruling administration's economic policy.",
-      "Several lawmakers claim the decision reflects poor planning and a failure to manage global economic pressures.",
-      "Some political analysts believe the protests could influence voter sentiment ahead of the 2024 elections.",
-      "The fuel policy may become a central campaign issue, with parties divided over subsidy reform.",
-      "Analysts also note that public trust could erode if the government fails to deliver promised social aid effectively."
-    ],
-    success: true
-  }
-];
-
-// Summarization function
 async function summarizeCluster(articles: string[], baseUrl: string): Promise<string> {
   try {
     const combinedText = articles.join('\n\n');
-    
-    const response = await fetch(`${baseUrl}/api/summarize`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text: combinedText }),
-    });
 
-    if (!response.ok) {
-      throw new Error(`Summarization failed: ${response.status}`);
+    const MAX_CHUNK_LENGTH = 1000; 
+    function chunkText(text: string, maxLength: number): string[] {
+      const chunks = [];
+      let current = '';
+      for (const paragraph of text.split('\n')) {
+        if ((current + paragraph).length > maxLength) {
+          chunks.push(current);
+          current = '';
+        }
+        current += paragraph + '\n';
+      }
+      if (current.trim().length > 0) chunks.push(current);
+      return chunks;
     }
 
-    const { summary } = await response.json();
-    return summary || 'No summary generated';
+    const chunks = chunkText(combinedText, MAX_CHUNK_LENGTH);
+
+    let summaries: string[] = [];
+    for (const chunk of chunks) {
+      const response = await fetch(`${baseUrl}/api/summarize`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: chunk }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Summarization failed: ${response.status}`);
+      }
+
+      const { summary } = await response.json();
+      summaries.push(summary || '');
+    }
+
+    return summaries.join('\n\n');
   } catch (error) {
     console.error('Summarization error:', error);
     return 'Summary generation failed';
   }
 }
 
-// Database save function
 async function savePerspectivesToDatabase(
   summarizedClusters: Record<string, SummarizedCluster>,
   topicId: string
@@ -533,144 +479,6 @@ async function savePerspectivesToDatabase(
 
   return await Promise.all(savePromises);
 }
-
-// // Main GET handler
-// export async function GET(request: NextRequest) {
-//   try {
-//     const { searchParams } = new URL(request.url);
-//     const query = searchParams.get('q');
-//     const urlParam = searchParams.get('url');
-//     const useReal = searchParams.get('real') === 'true'; // Flag to use real scraping
-    
-//     // Handle single URL scraping
-//     if (urlParam) {
-//       console.log(`Single URL scraping: ${urlParam}`);
-//       const scraped = await scrapeUrlWithRetry(urlParam);
-//       return NextResponse.json({ data: scraped });
-//     }
-
-//     if (!query) {
-//       return NextResponse.json({ error: 'Query is required' }, { status: 400 });
-//     }
-
-//     let normalizedArticles: string[];
-//     let metadata: {
-//       totalSearchResults: number;
-//       successfulScrapes: number;
-//       failedScrapes: number;
-//       isDummyData: boolean;
-//     };
-
-//     if (useReal && SERP_API_KEY) {
-//       // Real scraping logic (when you're ready to use it)
-//       console.log(`Real search query: ${query}`);
-      
-//       const serpRes = await axios.get('https://serpapi.com/search.json', {
-//         params: {
-//           q: query,
-//           api_key: SERP_API_KEY,
-//           engine: 'google',
-//           num: 15,
-//           hl: 'id',
-//           gl: 'id',
-//         },
-//         timeout: 30000,
-//       });
-
-//       const links: string[] = serpRes.data.organic_results
-//         ?.map((r: { link: string }) => r.link)
-//         ?.filter((link: string) => {
-//           if (!link) return false;
-//           const blacklist = [
-//             'facebook.com', 'instagram.com', 'tiktok.com', 
-//             'youtube.com', 'twitter.com', 'x.com',
-//             'linkedin.com', 'pinterest.com'
-//           ];
-//           return !blacklist.some(domain => link.includes(domain));
-//         })
-//         .slice(0, 10);
-
-//       if (!links.length) {
-//         return NextResponse.json({ error: 'No valid search results found' }, { status: 404 });
-//       }
-
-//       const results = await scrapeUrlsBatch(links);
-//       const successfulResults = results.filter(r => r.success && r.content.length > 0);
-
-//       if (successfulResults.length === 0) {
-//         return NextResponse.json({ 
-//           error: 'No articles could be scraped successfully'
-//         }, { status: 404 });
-//       }
-
-//       normalizedArticles = convertArticles(successfulResults);
-//       metadata = {
-//         totalSearchResults: links.length,
-//         successfulScrapes: successfulResults.length,
-//         failedScrapes: results.length - successfulResults.length,
-//         isDummyData: false
-//       };
-//     } else {
-//       // Use dummy data
-//       console.log(`Using dummy data for query: ${query}`);
-//       normalizedArticles = convertArticles(dummyArticles);
-//       metadata = {
-//         totalSearchResults: dummyArticles.length,
-//         successfulScrapes: dummyArticles.length,
-//         failedScrapes: 0,
-//         isDummyData: true
-//       };
-//     }
-
-//     console.log(`Processing ${normalizedArticles.length} articles, running clustering...`);
-    
-//     const clustered = await runClusteringPython(normalizedArticles);
-
-//     // Create base URL for summarization API call
-//     const protocol = request.headers.get('x-forwarded-proto') || 'http';
-//     const host = request.headers.get('host') || 'localhost:3000';
-//     const baseUrl = `${protocol}://${host}`;
-
-//     const summarizePromises = Object.entries(clustered).map(
-//       async ([perspectiveKey, articles]): Promise<[string, SummarizedCluster]> => {
-//         const summary = await summarizeCluster(articles, baseUrl);
-//         return [perspectiveKey, { summary, articles }];
-//       }
-//     );
-
-//     const summarizedEntries = await Promise.all(summarizePromises);
-//     const summarizedClusters = Object.fromEntries(summarizedEntries);
-
-//     // Save to database
-//     const topicId = "1"; 
-//     const saveResults = await savePerspectivesToDatabase(summarizedClusters, topicId);
-    
-//     console.log('Database save results:', saveResults);
-
-//     return NextResponse.json({
-//       summarized: summarizedClusters,
-//       metadata: {
-//         ...metadata,
-//         saveResults
-//       }
-//     });
-
-//   } catch (err) {
-//     console.error('General error:', err);
-//     return NextResponse.json({ 
-//       error: 'Unexpected error occurred',
-//       details: err instanceof Error ? err.message : 'Unknown error'
-//     }, { status: 500 });
-//   }
-// }
-
-
-type ClusteredSummary = {
-  [key: string]: {
-    summary: string;
-    articles: string[];
-  };
-};
 
 
 export async function GET(request: NextRequest) {
@@ -749,9 +557,31 @@ export async function GET(request: NextRequest) {
 
     console.log("Run clustering result:", await runClusteringPython(normalized));
 
-    const { summarized }: { summarized: ClusteredSummary } = await runClusteringPython(normalized);
+    const clusteringResult = await runClusteringPython(normalized);
+    console.log("Run clustering result:", clusteringResult);
 
-    const perspectivesData = Object.values(summarized);
+    if (!clusteringResult || Object.keys(clusteringResult).length === 0) {
+      return NextResponse.json({ error: 'Clustering failed or returned empty result' }, { status: 500 });
+    }
+
+const summarized = clusteringResult;
+const protocol = request.headers.get('x-forwarded-proto') || 'http';
+const host = request.headers.get('host') || 'localhost:3000';
+const baseUrl = `${protocol}://${host}`;
+
+const summarizePromises = Object.entries(summarized).map(
+  async ([perspectiveKey, articles]) => {
+    // articles: string[]
+    const summary = await summarizeCluster(articles, baseUrl);
+    return {
+      summary,
+      articles
+    };
+  }
+);
+
+const perspectivesData = await Promise.all(summarizePromises);
+
 
     const newTopic = await prisma.topic.create({
       data: {

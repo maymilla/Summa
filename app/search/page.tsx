@@ -122,13 +122,6 @@ export default function SearchPage() {
             className="w-full h-[40px] px-[22px] bg-white py-2 rounded-full opacity-80 shadow-lg border-none outline-none text-black text-sm font-normal transition-all duration-300 ease-in-out hover:opacity-100 hover:shadow-xl focus:opacity-100 focus:shadow-xl focus:border-none focus:outline-none focus:ring-0"
             style={{ border: 'none', outline: 'none' }}
           />
-
-          <button
-            onClick={handleSearch}
-            className="mt-4 ml-auto block bg-blue-600 text-white px-4 py-2 rounded shadow hover:bg-blue-700 transition"
-          >
-            Cari
-          </button>
         </div>
       </div>
 
